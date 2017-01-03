@@ -1,0 +1,34 @@
+{
+    "data": [
+        {
+            "type": "pbes",
+            "input_mcrl2": "separate/four5.mcrl2",
+            "lps_filename": "output/four5.lps",
+            "input_mcf": "properties/winning_strategy_yellow.mcl",
+            "pbes_filename": "output/four5.yellow_wins.pbes",
+            "preparation_options": {
+                "linearisation": "-D",
+                "lpsparunfold": ["-l -sBoard -n6", "-l -sRow -n7"],
+                "lps2pbes": "-s"
+            },
+            "run_options": {
+                "n_cores": [1, 4]
+            }
+        },
+        {
+            "type": "pbes",
+            "input_mcrl2": "separate/four6.mcrl2",
+            "lps_filename": "output/four6.lps",
+            "input_mcf": "properties/winning_strategy_yellow.mcl",
+            "pbes_filename": "output/four6.yellow_wins.pbes",
+            "preparation_options": {
+                "linearisation": "-D",
+                "lpsparunfold": ["-l -sBoard -n6", "-l -sRow -n7"],
+                "lps2pbes": "-s"
+            },
+            "run_options": {
+                "n_cores": [1, 4]
+            }
+        }
+    ]
+}

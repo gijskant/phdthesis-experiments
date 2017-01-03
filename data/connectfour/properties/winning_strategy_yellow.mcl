@@ -1,0 +1,2 @@
+% Encodes that the Yellow player has a winning strategy
+mu X . [Wins(Red)]false && <Move>(<Wins(Yellow)>true || [Move] X)

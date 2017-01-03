@@ -1,0 +1,5 @@
+# Requirements for the experiments scripts.
+# Usage: pip install -r requirements.txt
+
+humanfriendly
+
