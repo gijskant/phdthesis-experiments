@@ -13,17 +13,15 @@ Author: Gijs Kant <gijskant@protonmail.com>
 """
 import os
 import sys
-import re
 import json
-import StringIO
 from tools import *
 
 
 """
 Generate files required for the experiments.
 """
-def prepare_experiments(experiments):
-    tools = ToolRegistry().tools
+def prepare_experiments(config, experiments):
+    tools = ToolRegistry(config).tools
     for experiment in experiments:
         experiment_type = experiment['type']
         if (experiment_type == 'pbes'):
@@ -35,7 +33,7 @@ def prepare_experiments(experiments):
 """
 Run the experiments.
 """
-def run_experiments(experiments):
+def run_experiments(config, experiments):
     pass
 
 
@@ -48,30 +46,40 @@ def read_experiments(json_filename):
     json_file.close()
     return experiments
 
+def read_config(json_filename):
+    json_file = open(json_filename, 'r')
+    config = json.load(json_file)
+    json_file.close()
+    return config
+
 
 def usage():
     command = os.path.basename(sys.argv[0])
-    return "Usage: {0} <experiments.json> <prepare|run>".format(command)
+    return "Usage: {0} <config.json> <experiments.json> <prepare|run>".format(command)
 
 
 def main():
-    if len(sys.argv) <= 2:
+    if len(sys.argv) <= 3:
         print >> sys.stderr, usage()
         sys.exit(1)
 
     print >> sys.stderr, os.path.basename(sys.argv[0])
+    config_filename = sys.argv[1]
+    expriments_filename = sys.argv[2]
+    action = sys.argv[3]
 
-    json_filename = sys.argv[1]
-    print >> sys.stderr, 'JSON file:  ', json_filename
-    experiments = read_experiments(json_filename)
+    print >> sys.stderr, 'Config file:  ', config_filename
+    config = read_config(config_filename)
+
+    print >> sys.stderr, 'Experiments file:  ', expriments_filename
+    experiments = read_experiments(expriments_filename)
     print >> sys.stderr, 'Experiments:', len(experiments)
 
-    action = sys.argv[2]
     print >> sys.stderr, 'Action:     ', action
     if (action == 'run'):
-        run_experiments(experiments)
+        run_experiments(config, experiments)
     elif (action == 'prepare'):
-        prepare_experiments(experiments)
+        prepare_experiments(config, experiments)
     else:
         print >> sys.stderr, usage()
         sys.exit(1)

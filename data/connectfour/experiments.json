@@ -2,7 +2,7 @@
     "data": [
         {
             "type": "pbes",
-            "input_mcrl2": "separate/four5.mcrl2",
+            "input_mcrl2": "mcrl2/four5.mcrl2",
             "lps_filename": "output/four5.lps",
             "input_mcf": "properties/winning_strategy_yellow.mcl",
             "pbes_filename": "output/four5.yellow_wins.pbes",
@@ -17,7 +17,7 @@
         },
         {
             "type": "pbes",
-            "input_mcrl2": "separate/four6.mcrl2",
+            "input_mcrl2": "mcrl2/four6.mcrl2",
             "lps_filename": "output/four6.lps",
             "input_mcf": "properties/winning_strategy_yellow.mcl",
             "pbes_filename": "output/four6.yellow_wins.pbes",

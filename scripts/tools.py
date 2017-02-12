@@ -72,6 +72,14 @@ def create_tempfile(filename, suffix):
     (f, filename) = tempfile.mkstemp(suffix, modelname + '.')
     return filename
 
+def get_path_from_config(config, tool):
+    c = config.get('tools')
+    if c is None:
+        return None
+    t = c.get(tool)
+    if t is None:
+        return None
+    return t.get('path')
 
 class Tool:
     def prepare(self, data):
@@ -85,20 +93,26 @@ class Mcrl2(Tool):
 
     path = ""
 
-    def __init__(self, path = None):
+    def __init__(self, config):
+        path = get_path_from_config(config, 'mcrl2')
         if path is None:
             self.path = self.find_path()
         else:
-            self.path = path
+            self.path = os.path.abspath(path)
+        self.path += '/'
+        print >> sys.stderr, 'mcrl2 path:', self.path
+        test_program = self.path + 'mcrl22lps'
+        if not os.path.isfile(test_program):
+            raise Exception('mcrl22lps not found.')
 
     def find_path(self):
         path = run_simple_command('which mcrl22lps')
         mcrl2_dir = os.path.dirname(os.path.abspath(path))
-        print >> sys.stderr, 'mcrl2 path: ', mcrl2_dir
+        print >> sys.stderr, 'Found mcrl2 binary in path: ', path,
         return mcrl2_dir
 
     def check_pbes(self, pbes_filename):
-        command = 'pbesinfo {pbes_filename}'.format(pbes_filename = pbes_filename)
+        command = self.path + 'pbesinfo {pbes_filename}'.format(pbes_filename = pbes_filename)
         result = run_boolean_command(command)
         return result == 0
 
@@ -110,7 +124,7 @@ class Mcrl2(Tool):
         lps2pbes_options = preparation_options['lps2pbes']
 
         # lps2pbes
-        command = 'lps2pbes -v {lps2pbes_options} -f {input_mcf} {lps_filename} {pbes_filename}'.format(
+        command = self.path + 'lps2pbes -v {lps2pbes_options} -f {input_mcf} {lps_filename} {pbes_filename}'.format(
             lps2pbes_options = lps2pbes_options,
             input_mcf = input_mcf,
             lps_filename = lps_filename,
@@ -132,7 +146,7 @@ class Mcrl2(Tool):
             sys.exit(1)
 
     def check_lps(self, lps_filename):
-        command = 'lpsinfo {lps_filename}'.format(lps_filename = lps_filename)
+        command = self.path + 'lpsinfo {lps_filename}'.format(lps_filename = lps_filename)
         result = run_boolean_command(command)
         return result == 0
 
@@ -155,7 +169,7 @@ class Mcrl2(Tool):
 
             # linearisation
             lps_out = create_tempfile(lps_filename, '.lps')
-            command = 'mcrl22lps -v {lin_options} {input_mcrl2} {lps_out}'.format(
+            command = self.path + 'mcrl22lps -v {lin_options} {input_mcrl2} {lps_out}'.format(
                 lin_options = lin_options,
                 input_mcrl2 = input_mcrl2,
                 lps_out = lps_out
@@ -165,7 +179,7 @@ class Mcrl2(Tool):
             # lpssuminst
             lps_in = lps_out
             lps_out = create_tempfile(lps_filename, '.lps')
-            command = 'lpssuminst {lps_in} {lps_out}'.format(lps_in = lps_in, lps_out = lps_out)
+            command = self.path + 'lpssuminst {lps_in} {lps_out}'.format(lps_in = lps_in, lps_out = lps_out)
             run_command('lpssuminst ' + input_mcrl2, command, logfile)
             os.remove(lps_in)
 
@@ -184,14 +198,14 @@ class Mcrl2(Tool):
             # rewrite
             lps_in = lps_out
             lps_out = create_tempfile(lps_filename, '.lps')
-            command = 'lpsrewr -v {lps_in} {lps_out}'.format(lps_in = lps_in, lps_out = lps_out)
+            command = self.path + 'lpsrewr -v {lps_in} {lps_out}'.format(lps_in = lps_in, lps_out = lps_out)
             run_command('lpsrewr ' + input_mcrl2, command, logfile)
             os.remove(lps_in)
 
             # constelm
             lps_in = lps_out
             lps_out = create_tempfile(lps_filename, '.lps')
-            command = 'lpsconstelm -v -c {lps_in} {lps_out}'.format(lps_in = lps_in, lps_out = lps_out)
+            command = self.path + 'lpsconstelm -v -c {lps_in} {lps_out}'.format(lps_in = lps_in, lps_out = lps_out)
             run_command('lpsconstelm ' + input_mcrl2, command, logfile)
             os.remove(lps_in)
 
@@ -248,16 +262,23 @@ class Mcrl2(Tool):
 
 
 class Ltsmin(Tool):
-    def __init__(self, path = None):
+    def __init__(self, config):
+        path = get_path_from_config(config, 'ltsmin')
         if path is None:
             self.path = self.find_path()
         else:
-            self.path = path
+            self.path = os.path.abspath(path)
+        self.path += '/'
+        print >> sys.stderr, 'ltsmin path:', self.path
+        test_program = self.path + 'pbes2lts-sym'
+        if not os.path.isfile(test_program):
+            raise Exception('pbes2lts-sym not found.')
+
 
     def find_path(self):
         path = run_simple_command('which pbes2lts-sym')
         ltsmin_dir = os.path.dirname(os.path.abspath(path))
-        print >> sys.stderr, 'ltsmin path:', ltsmin_dir
+        print >> sys.stderr, 'Found ltsmin binary in path:', path,
         return ltsmin_dir
 
 
@@ -265,9 +286,9 @@ class ToolRegistry:
 
     tools = {}
 
-    def __init__(self):
+    def __init__(self, config):
         self.tools = {
-            'mcrl2': Mcrl2(),
-            'ltsmin': Ltsmin()
+            'mcrl2': Mcrl2(config),
+            'ltsmin': Ltsmin(config)
         }
 
