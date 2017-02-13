@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 # :noTabs=true:
 # (c) Copyright (c) 2017  Gijs Kant
-# (c) This file is distributed under the Apache Software License, Version 2.0
-# (c) (https://www.apache.org/licenses/LICENSE-2.0.txt).
+# (c) This file is distributed under the MIT License,
+# (c) see the file LICENSE.
 """
 tools.py
 
