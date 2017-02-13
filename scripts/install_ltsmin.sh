@@ -9,20 +9,21 @@ LTSMIN_BRANCH=next
 
 here=$(realpath $(dirname "${0}"))
 prefix=`pwd`
-export C_INCLUDE_PATH="$prefix/include:$C_INCLUDE_PATH"
+
+source ${here}/set_path.sh
 
 # Fetch Sylvan, build, install.
 if [ ! -f "${prefix}/lib/libsylvan.a" ]; then
     echo "Installing Sylvan ..." &&
     {
-        mkdir sylvan &&
-        pushd sylvan &&
+        mkdir -p deps/sylvan &&
+        pushd deps/sylvan &&
         wget "$SYLVAN_URL" &&
         tar -xf "v${SYLVAN_VERSION}.tar.gz" &&
         pushd sylvan-${SYLVAN_VERSION} &&
         mkdir build &&
         cd build &&
-        cmake .. -DSYLVAN_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=${prefix} &&
+        cmake .. -DSYLVAN_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX="${prefix}" &&
         make &&
         make install &&
         popd &&
@@ -34,10 +35,10 @@ if [ ! -f "${prefix}/lib/libsylvan.a" ]; then
     }
 fi
 
-source ${here}/set_library_path.sh
-
 # Fetch LTSmin from github, configure and build.
 echo "Installing LTSmin ..." &&
+mkdir -p deps &&
+pushd deps &&
 {
     git clone ${LTSMIN_URL} -b ${LTSMIN_BRANCH} ||
     echo "LTSmin repository already present."
@@ -47,7 +48,8 @@ git checkout ${LTSMIN_BRANCH} &&
 git pull &&
 git submodule update --init &&
 ./ltsminreconf &&
-./configure  --prefix=${prefix} --with-mcrl2=${prefix} &&
+./configure  --prefix="${prefix}" --with-mcrl2="${prefix}" &&
 make && make install &&
+popd &&
 popd &&
 echo "LTSmin installed."
