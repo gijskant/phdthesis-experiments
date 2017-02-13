@@ -13,7 +13,6 @@ Author: Gijs Kant <gijskant@protonmail.com>
 """
 import os
 import shutil
-import re
 import subprocess
 import sys
 import tempfile
@@ -86,9 +85,14 @@ class Tool:
     def prepare(self, data):
         pass
 
-    def run(self, data):
+    def run(self, experiments, index):
         pass
 
+    def list(self, experiments):
+        pass
+
+    def print_list(self, experiments):
+        pass
 
 class Mcrl2(Tool):
 
@@ -282,6 +286,103 @@ class Ltsmin(Tool):
         print >> sys.stderr, 'Found ltsmin binary in path:', path,
         return ltsmin_dir
 
+    def list(self, experiments):
+        runs = []
+        for data in experiments:
+            experiment_type = data['type']
+            assert experiment_type in ['lps', 'pbes']
+            if experiment_type is 'lps':
+                input_filename = data['lps_filename']
+            else:
+                input_filename = data['pbes_filename']
+            run_options = data.get('run_options')
+            if run_options is None:
+                print >> sys.stderr, 'No run options found for experiment', experiment_type, input_filename
+            else:
+                n_cores = run_options['n_cores']
+                for n in n_cores:
+                    runs.append({
+                        'type': experiment_type,
+                        'input': input_filename,
+                        'cores': n,
+                        'data': data
+                    })
+        return runs
+
+    def print_list(self, experiments):
+        runs = self.list(experiments)
+        for run in runs:
+            print run['type'], run['input'], run['cores']
+        print >> sys.stderr, 'Total:', len(runs)
+
+    def lps_instantiate(self, input_lps, n_cores):
+        raise Exception('not implemented yet.')
+
+    def pbes_instantiate(self, input_pbes, output_spg, n_cores):
+        # pbes2lts-sym
+        pbes2lts_options = '--mcrl2-rewriter=jitty -rgs --vset=lddmc --order=par-prev'
+        lace_options = '--lace-workers={}'.format(n_cores)
+        command = self.path + 'pbes2lts-sym {pbes2lts_options} {lace_options} {input_pbes} --pg-write={output_spg}'.format(
+            pbes2lts_options = pbes2lts_options,
+            input_pbes = input_pbes,
+            output_spg = output_spg,
+            lace_options = lace_options
+        )
+        # redirect log messages
+        logfile = '{input_pbes}.pbes2spg.{n_cores}.log'.format(input_pbes = input_pbes, n_cores = n_cores)
+        try:
+            print >> sys.stderr, ''
+            start = time.time()
+
+            run_command('Instantiating ' + input_pbes, command, logfile)
+
+            end = time.time()
+            print >> sys.stderr, 'Instantiating {} took {:.2f} seconds.'.format(input_pbes, (end - start))
+        except Exception as e:
+            print >> sys.stderr, 'Error:', e
+            if os.path.isfile(output_spg):
+                os.remove(output_spg)
+            sys.exit(1)
+
+    def pbes_solve(self, input_spg, n_cores):
+        # spgsolver
+        spgsolver_options = ''
+        lace_options = '--lace-workers={}'.format(n_cores)
+        command = self.path + 'spgsolver {spgsolver_options} {lace_options} {input_spg}'.format(
+            spgsolver_options = spgsolver_options,
+            input_spg = input_spg,
+            lace_options = lace_options
+        )
+        # redirect log messages
+        logfile = '{input_spg}.spgsolver.{n_cores}.log'.format(input_spg = input_spg, n_cores = n_cores)
+        try:
+            print >> sys.stderr, ''
+            start = time.time()
+
+            run_command('Solving ' + input_spg, command, logfile)
+
+            end = time.time()
+            print >> sys.stderr, 'Solving {} took {:.2f} seconds.'.format(input_spg, (end - start))
+        except Exception as e:
+            print >> sys.stderr, 'Error:', e
+            sys.exit(1)
+
+    def run(self, experiments, index):
+        runs = self.list(experiments)
+        if index > len(runs):
+            print >> sys.stderr, 'Choose a number between 1 and', len(runs), '( was:', index, ')'
+            raise Exception('Index out of bounds.')
+        run = runs[index - 1]
+        type = run['type']
+        input_filename = run['input']
+        cores = run['cores']
+        assert type in ['lps', 'pbes']
+        if type is 'lps':
+            self.lps_instantiate(input_filename, cores)
+        else:
+            spg_filename = input_filename + '.spg'
+            self.pbes_instantiate(input_filename, spg_filename, cores)
+            self.pbes_solve(spg_filename, cores)
 
 class ToolRegistry:
 
