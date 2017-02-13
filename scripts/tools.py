@@ -320,7 +320,7 @@ class Ltsmin(Tool):
         print >> sys.stderr, result
         result_file = '{}/{}.result'.format(output_dir, action)
         with open(result_file, 'w') as f:
-            f.write(result)
+            f.write(result + '\n')
 
     def lps_instantiate(self, input_lps, n_cores, output_dir):
         raise Exception('not implemented yet.')
@@ -378,7 +378,7 @@ class Ltsmin(Tool):
     def prepare_output_dir(self, input_path, cores, timestamp):
         parent = os.path.dirname(input_path)
         input_filename = os.path.basename(input_path)
-        output_dir = '{}/runs/{}/{}/{}'.format(parent, input_filename, cores, timestamp)
+        output_dir = 'runs/{}/{}/{}'.format(parent, input_filename, cores, timestamp)
         os.makedirs(output_dir)
         return (output_dir, input_filename)
 
