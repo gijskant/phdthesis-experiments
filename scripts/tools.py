@@ -188,7 +188,7 @@ class Mcrl2(Tool):
             for step in parunfold_steps:
                 lps_in = lps_out
                 lps_out = create_tempfile(lps_filename, '.lps')
-                command = 'lpsparunfold -v {options} {lps_in} {lps_out}'.format(
+                command = self.path + 'lpsparunfold -v {options} {lps_in} {lps_out}'.format(
                     options = step,
                     lps_in = lps_in,
                     lps_out = lps_out
