@@ -1,2 +1,8 @@
 *.pyc
 .idea
+bin
+lib
+include
+sylvan
+ltsmin
+mcrl2-*
