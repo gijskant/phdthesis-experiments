@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime
 import traceback
 from humanfriendly import AutomaticSpinner, Spinner, Timer
 
@@ -315,10 +316,16 @@ class Ltsmin(Tool):
             print run['type'], run['input'], run['cores']
         print >> sys.stderr, 'Total:', len(runs)
 
-    def lps_instantiate(self, input_lps, n_cores):
+    def report(self, action, result, output_dir):
+        print >> sys.stderr, result
+        result_file = '{}/{}.result'.format(output_dir, action)
+        with open(result_file, 'w') as f:
+            f.write(result)
+
+    def lps_instantiate(self, input_lps, n_cores, output_dir):
         raise Exception('not implemented yet.')
 
-    def pbes_instantiate(self, input_pbes, output_spg, n_cores):
+    def pbes_instantiate(self, input_pbes, output_spg, n_cores, output_dir):
         # pbes2lts-sym
         pbes2lts_options = '--mcrl2-rewriter=jitty -rgs --vset=lddmc --order=par-prev'
         lace_options = '--lace-workers={}'.format(n_cores)
@@ -329,7 +336,7 @@ class Ltsmin(Tool):
             lace_options = lace_options
         )
         # redirect log messages
-        logfile = '{input_pbes}.pbes2spg.{n_cores}.log'.format(input_pbes = input_pbes, n_cores = n_cores)
+        logfile = '{}/pbes2spg.log'.format(output_dir)
         try:
             print >> sys.stderr, ''
             start = time.time()
@@ -337,14 +344,14 @@ class Ltsmin(Tool):
             run_command('Instantiating ' + input_pbes, command, logfile)
 
             end = time.time()
-            print >> sys.stderr, 'Instantiating {} took {:.2f} seconds.'.format(input_pbes, (end - start))
+            self.report('pbes2spg', 'Instantiating {} took {:.2f} seconds.'.format(input_pbes, (end - start)), output_dir)
         except Exception as e:
             print >> sys.stderr, 'Error:', e
             if os.path.isfile(output_spg):
                 os.remove(output_spg)
             sys.exit(1)
 
-    def pbes_solve(self, input_spg, n_cores):
+    def pbes_solve(self, input_spg, n_cores, output_dir):
         # spgsolver
         spgsolver_options = ''
         lace_options = '--lace-workers={}'.format(n_cores)
@@ -354,7 +361,7 @@ class Ltsmin(Tool):
             lace_options = lace_options
         )
         # redirect log messages
-        logfile = '{input_spg}.spgsolver.{n_cores}.log'.format(input_spg = input_spg, n_cores = n_cores)
+        logfile = '{}/spgsolver.log'.format(output_dir)
         try:
             print >> sys.stderr, ''
             start = time.time()
@@ -362,12 +369,21 @@ class Ltsmin(Tool):
             run_command('Solving ' + input_spg, command, logfile)
 
             end = time.time()
-            print >> sys.stderr, 'Solving {} took {:.2f} seconds.'.format(input_spg, (end - start))
+            self.report('spgsolver', 'Solving {} took {:.2f} seconds.'.format(input_spg, (end - start)), output_dir)
+
         except Exception as e:
             print >> sys.stderr, 'Error:', e
             sys.exit(1)
 
+    def prepare_output_dir(self, input_path, cores, timestamp):
+        parent = os.path.dirname(input_path)
+        input_filename = os.path.basename(input_path)
+        output_dir = '{}/runs/{}/{}/{}'.format(parent, input_filename, cores, timestamp)
+        os.makedirs(output_dir)
+        return (output_dir, input_filename)
+
     def run(self, experiments, index):
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')
         runs = self.list(experiments)
         if index > len(runs):
             print >> sys.stderr, 'Choose a number between 1 and', len(runs), '( was:', index, ')'
@@ -378,11 +394,14 @@ class Ltsmin(Tool):
         cores = run['cores']
         assert type in ['lps', 'pbes']
         if type is 'lps':
-            self.lps_instantiate(input_filename, cores)
+            (output_dir, filename) = self.prepare_output_dir(input_filename, cores, timestamp)
+            self.lps_instantiate(input_filename, cores, output_dir)
         else:
-            spg_filename = input_filename + '.spg'
-            self.pbes_instantiate(input_filename, spg_filename, cores)
-            self.pbes_solve(spg_filename, cores)
+            (output_dir, filename) = self.prepare_output_dir(input_filename, cores, timestamp)
+            spg_filename = '{}/{}.spg'.format(output_dir, filename)
+            # FIXME: derive spg filename without directory prefix
+            self.pbes_instantiate(input_filename, spg_filename, cores, output_dir)
+            self.pbes_solve(spg_filename, cores, output_dir)
 
 class ToolRegistry:
 
