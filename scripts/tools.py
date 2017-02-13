@@ -12,6 +12,7 @@ Author: Gijs Kant <gijskant@protonmail.com>
 
 """
 import os
+import shutil
 import re
 import subprocess
 import sys
@@ -210,7 +211,7 @@ class Mcrl2(Tool):
             os.remove(lps_in)
 
             # move output to lps_filename
-            os.rename(lps_out, lps_filename)
+            shutil.move(lps_out, lps_filename)
 
             end = time.time()
             print >> sys.stderr, 'Generating {} took {:.2f} seconds.'.format(lps_filename, (end - start))
