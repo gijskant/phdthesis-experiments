@@ -82,6 +82,13 @@ def get_path_from_config(config, tool):
         return None
     return t.get('path')
 
+def prepare_output_dir(input_path, cores, timestamp):
+    input_filename = os.path.basename(input_path)
+    output_dir = 'runs/{}/{}/{}'.format(input_filename, cores, timestamp)
+    os.makedirs(output_dir)
+    return output_dir, input_filename
+
+
 class Tool:
     def prepare(self, data):
         pass
@@ -375,13 +382,6 @@ class Ltsmin(Tool):
             print >> sys.stderr, 'Error:', e
             sys.exit(1)
 
-    def prepare_output_dir(self, input_path, cores, timestamp):
-        parent = os.path.dirname(input_path)
-        input_filename = os.path.basename(input_path)
-        output_dir = 'runs/{}/{}/{}'.format(parent, input_filename, cores, timestamp)
-        os.makedirs(output_dir)
-        return (output_dir, input_filename)
-
     def run(self, experiments, index):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')
         runs = self.list(experiments)
@@ -394,12 +394,11 @@ class Ltsmin(Tool):
         cores = run['cores']
         assert type in ['lps', 'pbes']
         if type is 'lps':
-            (output_dir, filename) = self.prepare_output_dir(input_filename, cores, timestamp)
+            (output_dir, filename) = prepare_output_dir(input_filename, cores, timestamp)
             self.lps_instantiate(input_filename, cores, output_dir)
         else:
-            (output_dir, filename) = self.prepare_output_dir(input_filename, cores, timestamp)
+            (output_dir, filename) = prepare_output_dir(input_filename, cores, timestamp)
             spg_filename = '{}/{}.spg'.format(output_dir, filename)
-            # FIXME: derive spg filename without directory prefix
             self.pbes_instantiate(input_filename, spg_filename, cores, output_dir)
             self.pbes_solve(spg_filename, cores, output_dir)
 
