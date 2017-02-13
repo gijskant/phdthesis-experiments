@@ -48,7 +48,7 @@ git checkout ${LTSMIN_BRANCH} &&
 git pull &&
 git submodule update --init &&
 ./ltsminreconf &&
-./configure  --prefix="${prefix}" --with-mcrl2="${prefix}" &&
+./configure  --prefix="${prefix}" --with-mcrl2="${prefix}" --without-scoop &&
 make && make install &&
 popd &&
 popd &&
