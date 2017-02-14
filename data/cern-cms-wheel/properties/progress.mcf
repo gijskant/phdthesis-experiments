@@ -1,0 +1,7 @@
+% Property 4
+% Progress:
+nu X . [true] X &&
+  forall i: Id .( val(i in processes ) =>
+  mu Y . <exists s: State . move_state(i, s)> true ||
+        (<true>true && [true]Y)
+        )

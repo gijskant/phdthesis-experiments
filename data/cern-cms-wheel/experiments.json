@@ -1,0 +1,64 @@
+{
+    "data": [
+        {
+            "name": "wheel-absence",
+            "type": "pbes",
+            "input_mcrl2": "mcrl2/wheel.mcrl2",
+            "lps_filename": "output/wheel.lps",
+            "input_mcf": "properties/absence_of_intermediate_states.mcf",
+            "pbes_filename": "output/wheel-absence.pbes",
+            "preparation_options": {
+                "linearisation": "-fDn -lregular2",
+                "lps2pbes": "-s"
+            },
+            "run_options": {
+                "n_cores": [1, 4]
+            }
+        },
+        {
+            "name": "wheel-nodeadlock",
+            "type": "pbes",
+            "input_mcrl2": "mcrl2/wheel.mcrl2",
+            "lps_filename": "output/wheel.lps",
+            "input_mcf": "properties/nodeadlock.mcf",
+            "pbes_filename": "output/wheel-nodeadlock.pbes",
+            "preparation_options": {
+                "linearisation": "-fDn -lregular2",
+                "lps2pbes": "-s"
+            },
+            "run_options": {
+                "n_cores": [1, 4]
+            }
+        },
+        {
+            "name": "wheel-progress",
+            "type": "pbes",
+            "input_mcrl2": "mcrl2/wheel.mcrl2",
+            "lps_filename": "output/wheel.lps",
+            "input_mcf": "properties/progress.mcf",
+            "pbes_filename": "output/wheel-progress.pbes",
+            "preparation_options": {
+                "linearisation": "-fDn -lregular2",
+                "lps2pbes": "-s"
+            },
+            "run_options": {
+                "n_cores": [1, 4]
+            }
+        },
+        {
+            "name": "wheel-responsiveness",
+            "type": "pbes",
+            "input_mcrl2": "mcrl2/wheel.mcrl2",
+            "lps_filename": "output/wheel.lps",
+            "input_mcf": "properties/responsiveness.mcf",
+            "pbes_filename": "output/wheel-responsiveness.pbes",
+            "preparation_options": {
+                "linearisation": "-fDn -lregular2",
+                "lps2pbes": "-s"
+            },
+            "run_options": {
+                "n_cores": [1, 4]
+            }
+        }
+    ]
+}

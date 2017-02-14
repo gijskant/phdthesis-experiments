@@ -1,0 +1,9 @@
+% Property 3
+% Responsiveness
+nu X . [true] X &&
+  forall i: Id, i_c: Id, c: Command .
+  (
+    val(i in processes) =>
+  [cc(i,i_c,c)] (mu Y. <true>true &&
+                 [!cs(i_c,i,c2s(c))]Y)
+  )

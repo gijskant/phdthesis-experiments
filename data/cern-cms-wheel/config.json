@@ -1,0 +1,10 @@
+{
+    "tools": {
+        "ltsmin": {
+            "_path": "/home/gijs/bin"
+        },
+        "mcrl2": {
+            "_path": "/home/gijs/bin"
+        }
+    }
+}

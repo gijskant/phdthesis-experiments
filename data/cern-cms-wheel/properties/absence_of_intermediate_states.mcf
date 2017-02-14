@@ -1,0 +1,10 @@
+% Property 2
+% Absence of intermediate states in the when phase
+nu X . [true]X &&
+  forall i: Id . 
+  (
+    val(i in processes) =>
+     [exists s: State . move_state(i,s)](nu Y.
+         [(!move_phase(i, ActionPhase))]Y
+      && [exists s: State . move_state(i,s)]false)
+  )
