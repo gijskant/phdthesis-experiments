@@ -47,6 +47,14 @@ def run_experiment(config, experiments, index):
     ltsmin.run(experiments, index)
 
 """
+Analyse the results.
+"""
+def analyse_results(config, experiments):
+    tools = ToolRegistry(config).tools
+    ltsmin = tools['ltsmin']
+    ltsmin.analyse(experiments)
+
+"""
 Read experiment data from a JSON file.
 """
 def read_experiments(json_filename):
@@ -64,7 +72,7 @@ def read_config(json_filename):
 
 def usage():
     command = os.path.basename(sys.argv[0])
-    return """Usage: {0} <config.json> <experiments.json> <prepare|list|run> [index]
+    return """Usage: {0} <config.json> <experiments.json> <prepare|list|run|analyse> [index]
 For the command 'run', the [index] option is required.""".format(command)
 
 
@@ -86,16 +94,18 @@ def main():
     print >> sys.stderr, 'Experiments:', len(experiments)
 
     print >> sys.stderr, 'Action:     ', action
-    if (action == 'run'):
+    if action == 'run':
         if len(sys.argv) <= 4:
             print >> sys.stderr, usage()
             sys.exit(1)
         index = int(sys.argv[4])
         run_experiment(config, experiments, index)
-    elif (action == 'list'):
+    elif action == 'list':
         list_experiments(config, experiments)
-    elif (action == 'prepare'):
+    elif action == 'prepare':
         prepare_experiments(config, experiments)
+    elif action == 'analyse':
+        analyse_results(config, experiments)
     else:
         print >> sys.stderr, usage()
         sys.exit(1)

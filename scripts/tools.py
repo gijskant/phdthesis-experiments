@@ -13,13 +13,16 @@ Author: Gijs Kant <gijskant@protonmail.com>
 """
 import os
 import shutil
+import glob
 import subprocess
 import sys
 import tempfile
 import time
 from datetime import datetime
 import traceback
-from humanfriendly import AutomaticSpinner, Spinner, Timer
+import re
+import numpy
+from humanfriendly import AutomaticSpinner, Spinner, Timer, tables, terminal
 
 """
 Runs a command in a shell and returns the stdout.
@@ -82,11 +85,39 @@ def get_path_from_config(config, tool):
         return None
     return t.get('path')
 
-def prepare_output_dir(input_path, cores, timestamp):
-    input_filename = os.path.basename(input_path)
-    output_dir = 'runs/{}/{}/{}'.format(input_filename, cores, timestamp)
+def prepare_output_dir(name, cores, timestamp):
+    output_dir = 'runs/{}/{}/{}'.format(name, cores, timestamp)
     os.makedirs(output_dir)
-    return output_dir, input_filename
+    return output_dir
+
+def get_run_dirs(name, cores):
+    return glob.glob('runs/{}/{}/*'.format(name, cores))
+
+def get_pbes2spg_time(output_dir):
+    pattern = re.compile('^Instantiating took (\d+.\d*) seconds.')
+    with open(output_dir + '/pbes2spg.result') as f:
+        for l in f:
+            m = pattern.match(l)
+            if not m is None:
+                t = m.group(1)
+                return float(t)
+    return None
+
+def get_spgsolver_time(output_dir):
+    pattern = re.compile('^Solving took (\d+.\d*) seconds.')
+    with open(output_dir + '/spgsolver.result') as f:
+        for l in f:
+            m = pattern.match(l)
+            if not m is None:
+                t = m.group(1)
+                return float(t)
+    return None
+
+def get_summary(properties, data):
+    n = len(data)
+    mean = '{:.2f}'.format(numpy.mean(data))
+    stdev = '{:.2f}'.format(numpy.std(data, ddof=1))
+    return properties + [n, mean, stdev]
 
 
 class Tool:
@@ -101,6 +132,10 @@ class Tool:
 
     def print_list(self, experiments):
         pass
+
+    def analyse(self, experiments):
+        pass
+
 
 class Mcrl2(Tool):
 
@@ -152,7 +187,7 @@ class Mcrl2(Tool):
             run_command('Generating ' + pbes_filename, command, logfile)
 
             end = time.time()
-            print >> sys.stderr, 'Generating {} took {:.2f} seconds.'.format(pbes_filename, (end - start))
+            print >> sys.stderr, 'Generating took {:.2f} seconds.'.format((end - start))
         except Exception as e:
             print >> sys.stderr, 'Error:', e
             os.remove(pbes_filename)
@@ -226,7 +261,7 @@ class Mcrl2(Tool):
             shutil.move(lps_out, lps_filename)
 
             end = time.time()
-            print >> sys.stderr, 'Generating {} took {:.2f} seconds.'.format(lps_filename, (end - start))
+            print >> sys.stderr, 'Generating took {:.2f} seconds.'.format((end - start))
         except Exception as e:
             print >> sys.stderr, 'Error:', e
             traceback.print_exc(file=sys.stderr)
@@ -297,6 +332,7 @@ class Ltsmin(Tool):
     def list(self, experiments):
         runs = []
         for data in experiments:
+            experiment_name = data['name']
             experiment_type = data['type']
             assert experiment_type in ['lps', 'pbes']
             if experiment_type is 'lps':
@@ -310,6 +346,7 @@ class Ltsmin(Tool):
                 n_cores = run_options['n_cores']
                 for n in n_cores:
                     runs.append({
+                        'name': experiment_name,
                         'type': experiment_type,
                         'input': input_filename,
                         'cores': n,
@@ -320,7 +357,7 @@ class Ltsmin(Tool):
     def print_list(self, experiments):
         runs = self.list(experiments)
         for run in runs:
-            print run['type'], run['input'], run['cores']
+            print run['type'], run['name'], run['cores']
         print >> sys.stderr, 'Total:', len(runs)
 
     def report(self, action, result, output_dir):
@@ -351,7 +388,7 @@ class Ltsmin(Tool):
             run_command('Instantiating ' + input_pbes, command, logfile)
 
             end = time.time()
-            self.report('pbes2spg', 'Instantiating {} took {:.2f} seconds.'.format(input_pbes, (end - start)), output_dir)
+            self.report('pbes2spg', 'Instantiating took {:.2f} seconds.'.format((end - start)), output_dir)
         except Exception as e:
             print >> sys.stderr, 'Error:', e
             if os.path.isfile(output_spg):
@@ -376,7 +413,7 @@ class Ltsmin(Tool):
             run_command('Solving ' + input_spg, command, logfile)
 
             end = time.time()
-            self.report('spgsolver', 'Solving {} took {:.2f} seconds.'.format(input_spg, (end - start)), output_dir)
+            self.report('spgsolver', 'Solving took {:.2f} seconds.'.format((end - start)), output_dir)
 
         except Exception as e:
             print >> sys.stderr, 'Error:', e
@@ -389,18 +426,53 @@ class Ltsmin(Tool):
             print >> sys.stderr, 'Choose a number between 1 and', len(runs), '( was:', index, ')'
             raise Exception('Index out of bounds.')
         run = runs[index - 1]
+        name = run['name']
         type = run['type']
         input_filename = run['input']
         cores = run['cores']
         assert type in ['lps', 'pbes']
-        if type is 'lps':
-            (output_dir, filename) = prepare_output_dir(input_filename, cores, timestamp)
+        if type == 'lps':
+            output_dir = prepare_output_dir(name, cores, timestamp)
             self.lps_instantiate(input_filename, cores, output_dir)
         else:
-            (output_dir, filename) = prepare_output_dir(input_filename, cores, timestamp)
-            spg_filename = '{}/{}.spg'.format(output_dir, filename)
+            output_dir = prepare_output_dir(name, cores, timestamp)
+            spg_filename = '{}/{}.spg'.format(output_dir, name)
             self.pbes_instantiate(input_filename, spg_filename, cores, output_dir)
             self.pbes_solve(spg_filename, cores, output_dir)
+
+    def analyse(self, experiments):
+        pbes2spg_summaries = []
+        spgsolver_summaries = []
+        runs = self.list(experiments)
+        for run in runs:
+            type = run['type']
+            name = run['name']
+            cores = run['cores']
+            print >> sys.stderr, "Analysing results for run", name
+            pbes2spg_times = []
+            spgsolver_times = []
+            for d in get_run_dirs(name, cores):
+                t1 = get_pbes2spg_time(d)
+                if t1 is None:
+                    raise Exception('No instantiation time found for run ' + d)
+                pbes2spg_times.append(t1)
+                t2 = get_spgsolver_time(d)
+                if t2 is None:
+                    raise Exception('No solving time found for run ' + d)
+                spgsolver_times.append(t2)
+            if len(pbes2spg_times) > 0:
+                summary = get_summary([name, cores], pbes2spg_times)
+                pbes2spg_summaries.append(summary)
+            if len(spgsolver_times) > 0:
+                summary = get_summary([name, cores], spgsolver_times)
+                spgsolver_summaries.append(summary)
+        column_names = ['name', 'cores', 'n', 'mean', 'stdev']
+        print
+        print 'pbes2spg'
+        print(tables.format_pretty_table(pbes2spg_summaries, column_names))
+        print
+        print 'spgsolver'
+        print(tables.format_pretty_table(spgsolver_summaries, column_names))
 
 class ToolRegistry:
 
