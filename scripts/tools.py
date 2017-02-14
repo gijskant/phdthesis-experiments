@@ -23,29 +23,37 @@ import traceback
 import re
 import numpy
 from humanfriendly import AutomaticSpinner, Spinner, Timer, tables, terminal
+from easyprocess import EasyProcess
+
+experiment_timeout = 10000 # seconds
 
 """
 Runs a command in a shell and returns the stdout.
 """
-def run_command(label, command, logfile = None):
+def run_command(label, command, logfile = None, timeout = None):
     print >> sys.stderr, '-', command
     with AutomaticSpinner(label) as spinner:
         start =  time.time()
-        task = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (stdoutdata, stderrdata) = task.communicate()
-        result = task.wait()
-        if not result == 0:
-            raise Exception('Command failed.')
+        if timeout is None:
+            proc = EasyProcess(command).call()
+        else:
+            proc = EasyProcess(command).call(timeout=timeout)
+        if not proc.return_code == 0:
+            if proc.return_code == -15:
+                print >> sys.stderr, 'Timeout'
+                return False
+            else:
+                raise Exception('Command failed: ' + str(proc.return_code))
         if not logfile is None:
             f = open(logfile, 'a')
             f.write(command)
             f.write('\n')
-            if not stderrdata is None:
-                f.write(stderrdata)
+            if not proc.stderr is None:
+                f.write(proc.stderr)
             f.close()
         end = time.time()
-    print >> sys.stderr, '  ({:.2f} seconds)'.format((end - start))
-    return
+        print >> sys.stderr, '  ({:.2f} seconds)'.format((end - start))
+        return True
 
 """
 Runs a command in a shell and returns the stdout.
@@ -92,6 +100,30 @@ def prepare_output_dir(name, cores, timestamp):
 
 def get_run_dirs(name, cores):
     return glob.glob('runs/{}/{}/*'.format(name, cores))
+
+def is_pbes2spg_run(output_dir):
+    return os.path.isfile(output_dir + '/pbes2spg.result')
+
+def is_spgsolver_run(output_dir):
+    return os.path.isfile(output_dir + '/spgsolver.result')
+
+def is_pbes2spg_timeout(output_dir):
+    pattern = re.compile('^Timeout after (\d+.\d*) seconds.')
+    with open(output_dir + '/pbes2spg.result') as f:
+        for l in f:
+            m = pattern.match(l)
+            if not m is None:
+                return True
+    return False
+
+def is_spgsolver_timeout(output_dir):
+    pattern = re.compile('^Timeout after (\d+.\d*) seconds.')
+    with open(output_dir + '/spgsolver.result') as f:
+        for l in f:
+            m = pattern.match(l)
+            if not m is None:
+                return True
+    return False
 
 def get_pbes2spg_time(output_dir):
     pattern = re.compile('^Instantiating took (\d+.\d*) seconds.')
@@ -203,7 +235,9 @@ class Mcrl2(Tool):
         input_mcrl2 = data['input_mcrl2']
         preparation_options = data['preparation_options']
         lin_options = preparation_options['linearisation']
-        parunfold_steps = preparation_options['lpsparunfold']
+        parunfold_steps = preparation_options.get('lpsparunfold')
+        if parunfold_steps is None:
+            parunfold_steps = []
 
         # redirect log messages
         logfile = '{lps_filename}.log'.format(lps_filename = lps_filename)
@@ -385,10 +419,13 @@ class Ltsmin(Tool):
             print >> sys.stderr, ''
             start = time.time()
 
-            run_command('Instantiating ' + input_pbes, command, logfile)
+            success = run_command('Instantiating ' + input_pbes, command, logfile=logfile, timeout=experiment_timeout)
 
             end = time.time()
-            self.report('pbes2spg', 'Instantiating took {:.2f} seconds.'.format((end - start)), output_dir)
+            if success:
+                self.report('pbes2spg', 'Instantiating took {:.2f} seconds.'.format((end - start)), output_dir)
+            else:
+                self.report('pbes2spg', 'Timeout after {:.2f} seconds.'.format((end - start)), output_dir)
         except Exception as e:
             print >> sys.stderr, 'Error:', e
             if os.path.isfile(output_spg):
@@ -397,7 +434,7 @@ class Ltsmin(Tool):
 
     def pbes_solve(self, input_spg, n_cores, output_dir):
         # spgsolver
-        spgsolver_options = ''
+        spgsolver_options = '--attr=par'
         lace_options = '--lace-workers={}'.format(n_cores)
         command = self.path + 'spgsolver {spgsolver_options} {lace_options} {input_spg}'.format(
             spgsolver_options = spgsolver_options,
@@ -410,10 +447,13 @@ class Ltsmin(Tool):
             print >> sys.stderr, ''
             start = time.time()
 
-            run_command('Solving ' + input_spg, command, logfile)
+            success = run_command('Solving ' + input_spg, command, logfile=logfile, timeout=experiment_timeout)
 
             end = time.time()
-            self.report('spgsolver', 'Solving took {:.2f} seconds.'.format((end - start)), output_dir)
+            if (success):
+                self.report('spgsolver', 'Solving took {:.2f} seconds.'.format((end - start)), output_dir)
+            else:
+                self.report('spgsolver', 'Timeout after {:.2f} seconds.'.format((end - start)), output_dir)
 
         except Exception as e:
             print >> sys.stderr, 'Error:', e
@@ -450,23 +490,33 @@ class Ltsmin(Tool):
             cores = run['cores']
             print >> sys.stderr, "Analysing results for run", name
             pbes2spg_times = []
+            pbes2spg_timeouts = 0
             spgsolver_times = []
+            spgsolver_timeouts = 0
             for d in get_run_dirs(name, cores):
-                t1 = get_pbes2spg_time(d)
-                if t1 is None:
-                    raise Exception('No instantiation time found for run ' + d)
-                pbes2spg_times.append(t1)
-                t2 = get_spgsolver_time(d)
-                if t2 is None:
-                    raise Exception('No solving time found for run ' + d)
-                spgsolver_times.append(t2)
+                if is_pbes2spg_run(d):
+                    if is_pbes2spg_timeout(d):
+                        pbes2spg_timeouts += 1
+                    else:
+                        t1 = get_pbes2spg_time(d)
+                        if t1 is None:
+                            raise Exception('No instantiation time found for run ' + d)
+                        pbes2spg_times.append(t1)
+                if is_spgsolver_run(d):
+                    if is_spgsolver_timeout(d):
+                        spgsolver_timeouts += 1
+                    else:
+                        t2 = get_spgsolver_time(d)
+                        if t2 is None:
+                            raise Exception('No solving time found for run ' + d)
+                        spgsolver_times.append(t2)
             if len(pbes2spg_times) > 0:
-                summary = get_summary([name, cores], pbes2spg_times)
+                summary = get_summary([name, cores, pbes2spg_timeouts], pbes2spg_times)
                 pbes2spg_summaries.append(summary)
             if len(spgsolver_times) > 0:
-                summary = get_summary([name, cores], spgsolver_times)
+                summary = get_summary([name, cores, spgsolver_timeouts], spgsolver_times)
                 spgsolver_summaries.append(summary)
-        column_names = ['name', 'cores', 'n', 'mean', 'stdev']
+        column_names = ['name', 'cores', 'timeouts', 'n', 'mean', 'stdev']
         print
         print 'pbes2spg'
         print(tables.format_pretty_table(pbes2spg_summaries, column_names))
