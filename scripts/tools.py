@@ -108,7 +108,7 @@ def is_spgsolver_run(output_dir):
     return os.path.isfile(output_dir + '/spgsolver.result')
 
 def is_pbes2spg_timeout(output_dir):
-    pattern = re.compile('^Timeout after (\d+.\d*) seconds.')
+    pattern = re.compile('^Timeout after (\d+\.\d*) seconds.')
     with open(output_dir + '/pbes2spg.result') as f:
         for l in f:
             m = pattern.match(l)
@@ -117,7 +117,7 @@ def is_pbes2spg_timeout(output_dir):
     return False
 
 def is_spgsolver_timeout(output_dir):
-    pattern = re.compile('^Timeout after (\d+.\d*) seconds.')
+    pattern = re.compile('^Timeout after (\d+\.\d*) seconds.')
     with open(output_dir + '/spgsolver.result') as f:
         for l in f:
             m = pattern.match(l)
@@ -126,7 +126,7 @@ def is_spgsolver_timeout(output_dir):
     return False
 
 def get_pbes2spg_time(output_dir):
-    pattern = re.compile('^Instantiating took (\d+.\d*) seconds.')
+    pattern = re.compile('^Instantiating took (\d+\.\d*) seconds.')
     with open(output_dir + '/pbes2spg.result') as f:
         for l in f:
             m = pattern.match(l)
@@ -136,7 +136,7 @@ def get_pbes2spg_time(output_dir):
     return None
 
 def get_spgsolver_time(output_dir):
-    pattern = re.compile('^Solving took (\d+.\d*) seconds.')
+    pattern = re.compile('^Solving took (\d+\.\d*) seconds.')
     with open(output_dir + '/spgsolver.result') as f:
         for l in f:
             m = pattern.match(l)
@@ -147,8 +147,11 @@ def get_spgsolver_time(output_dir):
 
 def get_summary(properties, data):
     n = len(data)
-    mean = '{:.2f}'.format(numpy.mean(data))
-    stdev = '{:.2f}'.format(numpy.std(data, ddof=1))
+    mean = None
+    stdev = None
+    if n > 0:
+        mean = '{:.2f}'.format(numpy.mean(data))
+        stdev = '{:.2f}'.format(numpy.std(data, ddof=1))
     return properties + [n, mean, stdev]
 
 
@@ -510,10 +513,10 @@ class Ltsmin(Tool):
                         if t2 is None:
                             raise Exception('No solving time found for run ' + d)
                         spgsolver_times.append(t2)
-            if len(pbes2spg_times) > 0:
+            if len(pbes2spg_times) > 0 or pbes2spg_timeouts > 0:
                 summary = get_summary([name, cores, pbes2spg_timeouts], pbes2spg_times)
                 pbes2spg_summaries.append(summary)
-            if len(spgsolver_times) > 0:
+            if len(spgsolver_times) > 0 or spgsolver_timeouts > 0:
                 summary = get_summary([name, cores, spgsolver_timeouts], spgsolver_times)
                 spgsolver_summaries.append(summary)
         column_names = ['name', 'cores', 'timeouts', 'n', 'mean', 'stdev']
