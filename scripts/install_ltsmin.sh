@@ -5,7 +5,7 @@ SYLVAN_URL=https://github.com/trolando/sylvan/archive/v${SYLVAN_VERSION}.tar.gz
 SYLVAN_NAME=sylvan-${SYLVAN_VERSION}
 
 LTSMIN_URL=https://github.com/utwente-fmt/ltsmin.git
-LTSMIN_BRANCH=next
+LTSMIN_BRANCH=kant-thesis-experiments #next
 
 here=$(realpath $(dirname "${0}"))
 prefix=`pwd`
@@ -53,3 +53,4 @@ make && make install &&
 popd &&
 popd &&
 echo "LTSmin installed."
+

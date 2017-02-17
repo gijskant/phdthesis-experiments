@@ -2,6 +2,7 @@
 
 MCRL2_SOURCE=dev # any other value than 'dev' will fetch release
 MCRL2_DEV_URL=https://github.com/gijskant/mcrl2-pmc
+MCRL2_DEV_TAG=kant-thesis-experiments
 MCRL2_RELEASE=mcrl2-201409.1
 MCRL2_RELEASE_URL=http://www.mcrl2.org/download/release/${MCRL2_RELEASE}.tar.gz
 
@@ -21,7 +22,7 @@ pushd deps && {
             [ -e "${target}" ] &&
             echo "mCRL2 repository already present."
         } || {
-            git clone ${MCRL2_DEV_URL}
+            git clone ${MCRL2_DEV_URL} --branch ${MCRL2_DEV_TAG}
         }
     else
         # Fetch release version
