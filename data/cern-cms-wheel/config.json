@@ -1,10 +1,10 @@
 {
     "tools": {
         "ltsmin": {
-            "_path": "/home/gijs/bin"
+            "_path": "/usr/local/bin"
         },
         "mcrl2": {
-            "_path": "/home/gijs/bin"
+            "_path": "/usr/local/bin"
         }
     }
 }
