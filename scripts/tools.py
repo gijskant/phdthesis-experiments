@@ -27,10 +27,11 @@ from easyprocess import EasyProcess
 
 experiment_timeout = 10000 # seconds
 
-"""
-Runs a command in a shell and returns the stdout.
-"""
+
 def run_command(label, command, logfile = None, timeout = None):
+    """
+    Runs a command in a shell and returns the stdout.
+    """
     print >> sys.stderr, '-', command
     with AutomaticSpinner(label) as spinner:
         start =  time.time()
@@ -55,27 +56,30 @@ def run_command(label, command, logfile = None, timeout = None):
         print >> sys.stderr, '  ({:.2f} seconds)'.format((end - start))
         return True
 
-"""
-Runs a command in a shell and returns the stdout.
-"""
+
 def run_simple_command(command):
+    """
+    Runs a command in a shell and returns the stdout.
+    """
     task = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
     data = task.stdout.read()
     result = task.wait()
     return data
 
-"""
-Runs a command in a shell and returns the stdout.
-"""
+
 def run_boolean_command(command):
+    """
+    Runs a command in a shell and returns the stdout.
+    """
     task = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
     result = task.wait()
     return result
 
-"""
-Gets the filename without extension.
-"""
+
 def get_model_name(filename):
+    """
+    Gets the filename without extension.
+    """
     return os.path.splitext(os.path.basename(filename))[0]
 
 
@@ -83,6 +87,7 @@ def create_tempfile(filename, suffix):
     modelname = get_model_name(filename)
     (f, filename) = tempfile.mkstemp(suffix, modelname + '.')
     return filename
+
 
 def get_path_from_config(config, tool):
     c = config.get('tools')
@@ -93,19 +98,24 @@ def get_path_from_config(config, tool):
         return None
     return t.get('path')
 
+
 def prepare_output_dir(name, cores, timestamp):
     output_dir = 'runs/{}/{}/{}'.format(name, cores, timestamp)
     os.makedirs(output_dir)
     return output_dir
 
+
 def get_run_dirs(name, cores):
     return glob.glob('runs/{}/{}/*'.format(name, cores))
+
 
 def is_pbes2spg_run(output_dir):
     return os.path.isfile(output_dir + '/pbes2spg.result')
 
+
 def is_spgsolver_run(output_dir):
     return os.path.isfile(output_dir + '/spgsolver.result')
+
 
 def is_pbes2spg_timeout(output_dir):
     pattern = re.compile('^Timeout after (\d+\.\d*) seconds.')
@@ -116,6 +126,7 @@ def is_pbes2spg_timeout(output_dir):
                 return True
     return False
 
+
 def is_spgsolver_timeout(output_dir):
     pattern = re.compile('^Timeout after (\d+\.\d*) seconds.')
     with open(output_dir + '/spgsolver.result') as f:
@@ -124,6 +135,7 @@ def is_spgsolver_timeout(output_dir):
             if not m is None:
                 return True
     return False
+
 
 def get_pbes2spg_time(output_dir):
     pattern = re.compile('^Instantiating took (\d+\.\d*) seconds.')
@@ -135,6 +147,7 @@ def get_pbes2spg_time(output_dir):
                 return float(t)
     return None
 
+
 def get_spgsolver_time(output_dir):
     pattern = re.compile('^Solving took (\d+\.\d*) seconds.')
     with open(output_dir + '/spgsolver.result') as f:
@@ -144,6 +157,7 @@ def get_spgsolver_time(output_dir):
                 t = m.group(1)
                 return float(t)
     return None
+
 
 def get_summary(properties, data):
     n = len(data)
@@ -359,7 +373,6 @@ class Ltsmin(Tool):
         if not os.path.isfile(test_program):
             raise Exception('pbes2lts-sym not found.')
 
-
     def find_path(self):
         path = run_simple_command('which pbes2lts-sym')
         ltsmin_dir = os.path.dirname(os.path.abspath(path))
@@ -526,6 +539,7 @@ class Ltsmin(Tool):
         print
         print 'spgsolver'
         print(tables.format_pretty_table(spgsolver_summaries, column_names))
+
 
 class ToolRegistry:
 
