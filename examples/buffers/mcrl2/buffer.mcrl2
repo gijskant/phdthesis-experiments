@@ -1,0 +1,16 @@
+sort D;
+cons none, d1, d2: D;
+map ord: D -> Nat;
+var x, y: D;
+eqn ord(none) = 0;
+    ord(d1) = 1;
+    ord(d2) = 2;
+    x == y = ord(x) == ord(y);
+
+act receive, send: D;
+
+proc Buffer(full: Bool, data: D) =
+    sum d: D . (!full && d != none) -> receive(d) . Buffer(true, d)
+  + full -> send(data) . Buffer(false, none);
+
+init Buffer(false, none);

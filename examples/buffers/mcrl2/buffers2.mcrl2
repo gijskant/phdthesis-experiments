@@ -1,0 +1,30 @@
+sort D;
+cons none, d1, d2: D;
+map ord: D -> Nat;
+var x, y: D;
+eqn ord(none) = 0;
+    ord(d1) = 1;
+    ord(d2) = 2;
+    x == y = ord(x) == ord(y);
+
+act receive, send: D;
+
+proc Buffer(full: Bool, data: D) =
+    sum d: D . (!full && d != none) -> receive(d) . Buffer(true, d)
+  + full -> send(data) . Buffer(false, none);
+
+act s1, s2: D;
+
+proc BufferIn = rename({send -> s1}, Buffer(false, none));
+
+proc BufferOut = rename({receive -> s2}, Buffer(false, none));
+
+act sync: D;
+
+proc Buffers2 = hide({sync},
+  allow({receive, sync, send},
+    comm({s1|s2 -> sync}, BufferIn || BufferOut)
+  )
+);
+
+init Buffers2;

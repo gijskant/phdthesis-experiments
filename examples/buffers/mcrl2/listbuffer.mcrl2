@@ -1,0 +1,16 @@
+sort D;
+cons none, d1, d2: D;
+map ord: D -> Nat;
+var x, y: D;
+eqn ord(none) = 0;
+    ord(d1) = 1;
+    ord(d2) = 2;
+    x == y = ord(x) == ord(y);
+
+act receive, send: D;
+
+proc ListBuffer(q: List(D)) =
+    sum d: D . (d != none && #q < 2) -> receive(d) . ListBuffer(q <| d)
+  + (#q > 0) -> send(head(q)) . ListBuffer(tail(q));
+
+init ListBuffer([]);
